@@ -9,6 +9,8 @@ import {
 	CheckCircle,
 	AlertCircle,
 	Clock,
+	Menu,
+	X,
 } from "lucide-react";
 import Typewriter from "../components/Typewriter";
 import FileUpload from "../components/FileUpload";
@@ -46,6 +48,7 @@ const Chat: React.FC = () => {
 	>([]);
 	const [isDriveConnected, setIsDriveConnected] = useState(false);
 	const [syncing, setSyncing] = useState(false);
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
 	const handleLogout = () => {
 		localStorage.removeItem("token");
@@ -217,10 +220,28 @@ const Chat: React.FC = () => {
 	};
 
 	return (
-		<div className="flex h-screen bg-charcoal_blue-100 text-ash_grey-900">
-			<div className="w-64 bg-charcoal_blue-200 p-4 flex flex-col border-r border-charcoal_blue-300">
-				<div className="mb-6">
+		<div className="flex h-screen bg-charcoal_blue-100 text-ash_grey-900 relative">
+			{/* Mobile Overlay */}
+			{isSidebarOpen && (
+				<div
+					className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"
+					onClick={() => setIsSidebarOpen(false)}
+				/>
+			)}
+
+			<div
+				className={`fixed inset-y-0 left-0 z-40 w-64 bg-charcoal_blue-200 p-4 flex flex-col border-r border-charcoal_blue-300 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+					isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+				}`}
+			>
+				<div className="mb-6 flex justify-between items-center">
 					<h1 className="text-xl font-bold">Exo</h1>
+					<button
+						onClick={() => setIsSidebarOpen(false)}
+						className="md:hidden text-gray-400 hover:text-white"
+					>
+						<X size={24} />
+					</button>
 				</div>
 				<button
 					onClick={() => {
@@ -339,7 +360,16 @@ const Chat: React.FC = () => {
 				</div>
 			</div>
 
-			<div className="flex-1 flex flex-col">
+			<div className="flex-1 flex flex-col w-full">
+				<div className="md:hidden p-4 border-b border-charcoal_blue-300 flex items-center bg-charcoal_blue-200">
+					<button
+						onClick={() => setIsSidebarOpen(true)}
+						className="text-gray-400 hover:text-white mr-4"
+					>
+						<Menu size={24} />
+					</button>
+					<h1 className="text-xl font-bold">Exo</h1>
+				</div>
 				<div className="flex-1 overflow-y-auto p-6 space-y-6">
 					{messages.length === 0 && (
 						<div className="flex flex-col items-center justify-center h-full text-gray-500">
