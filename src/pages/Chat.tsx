@@ -39,6 +39,7 @@ const Chat: React.FC = () => {
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [conversationId, setConversationId] = useState<number | null>(null);
+	const [chatTitle, setChatTitle] = useState<string>("");
 	const [conversations, setConversations] = useState<Conversation[]>([]);
 	const [documents, setDocuments] = useState<
 		{
@@ -111,6 +112,19 @@ const Chat: React.FC = () => {
 			);
 			setMessages(res.data);
 			setConversationId(id);
+			// Compute heading from first user message (first 5 words)
+			const firstUserMsg = res.data.find(
+				(msg: any) => msg.role === "user"
+			);
+			if (firstUserMsg && firstUserMsg.content) {
+				const words = firstUserMsg.content
+					.split(/\s+/)
+					.slice(0, 5)
+					.join(" ");
+				setChatTitle(words);
+			} else {
+				setChatTitle("");
+			}
 		} catch (error) {
 			console.error("Failed to fetch messages", error);
 		}
@@ -150,10 +164,39 @@ const Chat: React.FC = () => {
 			await axios.delete(`${API_URL}/api/v1/documents/${docId}`, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
-			fetchDocuments();
+			// Optimistic update: Remove from local state
+			setDocuments((prev) => prev.filter((d) => d.id !== docId));
 		} catch (error) {
 			console.error("Failed to delete document", error);
 			alert("Failed to delete document");
+			fetchDocuments(); // Revert/Sync on error
+		}
+	};
+
+	const handleDeleteConversation = async (
+		convId: number,
+		e: React.MouseEvent
+	) => {
+		e.stopPropagation();
+		if (!confirm("Are you sure you want to delete this conversation?"))
+			return;
+		try {
+			const token = localStorage.getItem("token");
+			await axios.delete(`${API_URL}/api/v1/chat/${convId}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			// Optimistic update: Remove from local state instead of refetching
+			setConversations((prev) => prev.filter((c) => c.id !== convId));
+
+			if (conversationId === convId) {
+				setConversationId(null);
+				setMessages([]);
+				setChatTitle("");
+			}
+		} catch (error) {
+			console.error("Failed to delete conversation", error);
+			alert("Failed to delete conversation");
+			fetchConversations(); // Revert/Sync on error
 		}
 	};
 
@@ -292,6 +335,7 @@ const Chat: React.FC = () => {
 					onClick={() => {
 						setConversationId(null);
 						setMessages([]);
+						setChatTitle("");
 					}}
 					className="flex items-center gap-2 bg-deep_teal-500 hover:bg-deep_teal-600 p-3 rounded-lg mb-4 transition-colors w-full text-white"
 				>
@@ -354,7 +398,7 @@ const Chat: React.FC = () => {
 							documents.map((doc) => (
 								<div
 									key={doc.id}
-									className="text-xs text-gray-400 flex items-center gap-2"
+									className="text-xs text-gray-400 flex items-center gap-2 group p-1 hover:bg-charcoal_blue-400 rounded transition-colors"
 									title={doc.error_message || doc.filename}
 								>
 									{doc.status === "completed" && (
@@ -383,7 +427,7 @@ const Chat: React.FC = () => {
 										onClick={(e) =>
 											handleDeleteDocument(doc.id, e)
 										}
-										className="text-gray-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+										className="text-gray-500 hover:text-red-400 transition-colors p-1 rounded hover:bg-gray-700"
 										title="Remove file"
 									>
 										<Trash size={12} />
@@ -400,14 +444,23 @@ const Chat: React.FC = () => {
 						<div
 							key={conv.id}
 							onClick={() => fetchMessages(conv.id)}
-							className={`flex items-center gap-2 p-2 hover:bg-gray-700 rounded cursor-pointer text-gray-300 ${
+							className={`group flex items-center gap-2 p-2 hover:bg-gray-700 rounded cursor-pointer text-gray-300 ${
 								conversationId === conv.id ? "bg-gray-700" : ""
 							}`}
 						>
 							<MessageSquare size={16} />
-							<span className="truncate">
+							<span className="truncate flex-1">
 								{conv.title || `Conversation ${conv.id}`}
 							</span>
+							<button
+								onClick={(e) =>
+									handleDeleteConversation(conv.id, e)
+								}
+								className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+								title="Delete conversation"
+							>
+								<Trash size={16} />
+							</button>
 						</div>
 					))}
 				</div>
@@ -432,6 +485,12 @@ const Chat: React.FC = () => {
 					</button>
 					<h1 className="text-xl font-bold">Exo</h1>
 				</div>
+				{chatTitle && (
+					<h2 className="hidden md:block text-xl font-bold p-4 text-center border-b border-charcoal_blue-300 text-ash_grey-900">
+						{chatTitle}
+					</h2>
+				)}
+
 				<div className="flex-1 overflow-y-auto p-6 space-y-6">
 					{messages.length === 0 && (
 						<div className="flex flex-col items-center justify-center h-full text-gray-500">
