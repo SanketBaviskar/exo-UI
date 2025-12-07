@@ -10,6 +10,8 @@ import {
 	AlertCircle,
 	Clock,
 	Menu,
+	Calendar,
+	Trash,
 	X,
 } from "lucide-react";
 import Typewriter from "../components/Typewriter";
@@ -85,7 +87,11 @@ const Chat: React.FC = () => {
 	const fetchDocuments = async () => {
 		try {
 			const token = localStorage.getItem("token");
-			const res = await axios.get(`${API_URL}/api/v1/documents/`, {
+			let url = `${API_URL}/api/v1/documents/`;
+			if (conversationId) {
+				url += `?conversation_id=${conversationId}`;
+			}
+			const res = await axios.get(url, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
 			setDocuments(res.data);
@@ -135,6 +141,22 @@ const Chat: React.FC = () => {
 		scope: "https://www.googleapis.com/auth/drive.readonly",
 	});
 
+	const handleDeleteDocument = async (docId: number, e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (!confirm("Are you sure you want to remove this file?")) return;
+
+		try {
+			const token = localStorage.getItem("token");
+			await axios.delete(`${API_URL}/api/v1/documents/${docId}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			fetchDocuments();
+		} catch (error) {
+			console.error("Failed to delete document", error);
+			alert("Failed to delete document");
+		}
+	};
+
 	const syncDrive = async () => {
 		setSyncing(true);
 		try {
@@ -155,11 +177,34 @@ const Chat: React.FC = () => {
 		}
 	};
 
+	const syncCalendar = async () => {
+		setSyncing(true);
+		try {
+			const token = localStorage.getItem("token");
+			const res = await axios.post(
+				`${API_URL}/api/v1/calendar/sync/google`,
+				{},
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+			alert(res.data.message);
+		} catch (error) {
+			console.error("Calendar Sync failed", error);
+			alert("Calendar Sync failed");
+		} finally {
+			setSyncing(false);
+		}
+	};
+
 	useEffect(() => {
 		fetchConversations();
-		fetchDocuments();
 		fetchUser();
 	}, []);
+
+	useEffect(() => {
+		fetchDocuments();
+	}, [conversationId]); // Refetch documents when conversation changes
 
 	useEffect(() => {
 		const hasPending = documents.some(
@@ -268,13 +313,13 @@ const Chat: React.FC = () => {
 								alt="Drive"
 								className="w-4 h-4"
 							/>
-							Connect Drive
+							Connect Google
 						</button>
 					) : (
 						<div className="space-y-2">
 							<div className="flex items-center gap-2 text-green-400 text-sm">
 								<span className="w-2 h-2 bg-green-400 rounded-full"></span>
-								Drive Connected
+								Google Connected
 							</div>
 							<button
 								onClick={syncDrive}
@@ -282,6 +327,14 @@ const Chat: React.FC = () => {
 								className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-500 p-2 rounded w-full text-sm transition-colors disabled:opacity-50"
 							>
 								{syncing ? "Syncing..." : "Sync Files"}
+							</button>
+							<button
+								onClick={syncCalendar}
+								disabled={syncing}
+								className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-500 p-2 rounded w-full text-sm transition-colors disabled:opacity-50"
+							>
+								<Calendar size={16} />
+								{syncing ? "Syncing..." : "Sync Calendar"}
 							</button>
 						</div>
 					)}
@@ -326,6 +379,15 @@ const Chat: React.FC = () => {
 									<span className="truncate flex-1">
 										{doc.filename}
 									</span>
+									<button
+										onClick={(e) =>
+											handleDeleteDocument(doc.id, e)
+										}
+										className="text-gray-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+										title="Remove file"
+									>
+										<Trash size={12} />
+									</button>
 								</div>
 							))
 						)}
@@ -419,7 +481,10 @@ const Chat: React.FC = () => {
 
 				<div className="p-4 bg-charcoal_blue-200 border-t border-charcoal_blue-300">
 					<div className="max-w-4xl mx-auto relative flex items-center gap-2">
-						<FileUpload onUploadSuccess={fetchDocuments} />
+						<FileUpload
+							onUploadSuccess={fetchDocuments}
+							conversationId={conversationId}
+						/>
 						<div className="relative flex-1">
 							<input
 								type="text"

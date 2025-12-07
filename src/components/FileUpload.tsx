@@ -6,9 +6,13 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 interface FileUploadProps {
 	onUploadSuccess?: () => void;
+	conversationId?: number | null;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
+const FileUpload: React.FC<FileUploadProps> = ({
+	onUploadSuccess,
+	conversationId,
+}) => {
 	const [uploading, setUploading] = useState(false);
 	const [message, setMessage] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +40,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
 
 		const formData = new FormData();
 		formData.append("file", file);
+		if (conversationId) {
+			formData.append("conversation_id", conversationId.toString());
+		}
 
 		try {
 			const token = localStorage.getItem("token");
