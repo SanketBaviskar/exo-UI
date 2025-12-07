@@ -122,8 +122,7 @@ const Login: React.FC = () => {
 					<GoogleLogin
 						onSuccess={handleSuccess}
 						onError={() => {
-							console.log("Login Failed");
-						}}
+													}}
 						theme="filled_black"
 						shape="rectangular"
 						text={isSignup ? "signup_with" : "signin_with"}
@@ -148,3 +147,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+
