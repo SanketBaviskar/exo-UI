@@ -18,9 +18,18 @@ import Typewriter from "../components/Typewriter";
 import FileUpload from "../components/FileUpload";
 import axios from "axios";
 
+interface Source {
+	text: string;
+	metadata: {
+		source_app: string;
+		source_url?: string;
+	};
+}
+
 interface Message {
 	role: "user" | "assistant";
 	content: string;
+	sources?: Source[];
 }
 
 interface Conversation {
@@ -284,6 +293,7 @@ const Chat: React.FC = () => {
 			const assistantMsg: Message = {
 				role: "assistant",
 				content: res.data.answer,
+				sources: res.data.sources,
 			};
 			setMessages((prev) => [...prev, assistantMsg]);
 
@@ -526,6 +536,45 @@ const Chat: React.FC = () => {
 										msg.content
 									)}
 								</p>
+								{msg.sources && msg.sources.length > 0 && (
+									<div className="mt-4 pt-4 border-t border-gray-600 text-sm">
+										<p className="font-semibold text-gray-400 mb-2">
+											Sources:
+										</p>
+										<div className="space-y-2">
+											{msg.sources.map((source, i) => (
+												<div
+													key={i}
+													className="bg-charcoal_blue-400 p-3 rounded text-xs text-gray-300 border border-gray-600"
+												>
+													<div className="font-medium text-deep_teal-300 mb-1 capitalize">
+														{source.metadata.source_app?.replace(
+															"_",
+															" "
+														) || "Unknown Source"}
+													</div>
+													<div className="italic mb-1 opacity-80">
+														"{source.text}"
+													</div>
+													{source.metadata
+														.source_url && (
+														<a
+															href={
+																source.metadata
+																	.source_url
+															}
+															target="_blank"
+															rel="noopener noreferrer"
+															className="text-blue-400 hover:underline block mt-1"
+														>
+															View Source
+														</a>
+													)}
+												</div>
+											))}
+										</div>
+									</div>
+								)}
 							</div>
 						</div>
 					))}
